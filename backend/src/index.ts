@@ -52,6 +52,7 @@ import {
   feeWaiverAdminRouter,
   feeWaiverBorrowerRouter,
 } from "./routes/feeWaiver.js";
+import { bankAccountBorrowerRouter } from "./routes/bankAccount.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { logMasker } from "./middleware/logMasker.js";
@@ -238,6 +239,7 @@ app.use("/api/health", healthRouter);
 app.use("/api/verification", verificationLimiter, verificationRouter);
 app.use("/api/verify", verificationLimiter, verifyRouter);
 app.use("/api/borrower", mutationRateLimiter, authMiddleware, borrowerRouter);
+app.use("/api/borrower", mutationRateLimiter, authMiddleware, bankAccountBorrowerRouter);
 app.use("/api/borrower", mutationRateLimiter, authMiddleware, feeWaiverBorrowerRouter);
 app.use("/api/loan", mutationRateLimiter, authMiddleware, loanRouter);
 app.use("/api/loan", mutationRateLimiter, authMiddleware, feeWaiverLoanRouter);

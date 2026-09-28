@@ -28,6 +28,7 @@ import {
   recordApplicantTaxIdHash,
   DUPLICATE_TAX_ID_REVIEW_REASON,
 } from "../services/taxIdDedup.js";
+import { flagApplicationIfSharedBankAccount } from "../services/bankAccountDedup.js";
 import { reconstructLoanApplicationAt } from "../services/loanHistory.js";
 import {
   checkDuplicateApplicants,
@@ -126,6 +127,14 @@ loanRouter.post("/apply", idempotencyMiddleware, validatePositiveNumber("amount"
       logger.warn(
         `Application ${app.id} held for manual review: tax ID matches ${taxIdMatches.length} other applicant(s)`
       );
+    }
+
+    // Issue #747: an account linked before this application existed was never
+    // seen by the link-time flagging, so check for a shared account here.
+    const bankReviewReason = await flagApplicationIfSharedBankAccount(app.id, borrowerAddress);
+    if (bankReviewReason) {
+      app.manualReviewReason = bankReviewReason;
+      logger.warn(`Application ${app.id} held for manual review: applicant shares a bank account with another applicant`);
     }
 
     if (dupStatus === "MANUAL_REVIEW") {

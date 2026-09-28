@@ -5,6 +5,9 @@
 
 export type StellarNetwork = "testnet" | "mainnet" | "futurenet" | "standalone";
 
+/** Development fallback only: hashing refuses to run with it when NODE_ENV=production. */
+export const DEFAULT_BANK_ACCOUNT_HASH_SECRET = "default_bank_account_hash_secret";
+
 const NETWORK_PASSPHRASE_DEFAULTS: Record<StellarNetwork, string> = {
   testnet: "Test SDF Network ; September 2015",
   mainnet: "Public Global Stellar Network ; September 2015",
@@ -133,6 +136,8 @@ export interface Config {
   kycFailoverAlertAfterMs: number;
   /** HMAC key for applicant tax ID hashes used in duplicate detection. */
   taxIdHashSecret: string;
+  /** HMAC key for linked bank account hashes used in duplicate detection (issue #747). */
+  bankAccountHashSecret: string;
   /** Webhook delivery p95 latency (ms) above which an endpoint is flagged (issue #619). */
   webhookLatencySlaMs: number;
   /** Default rolling window (minutes) for the webhook latency report. */
@@ -308,6 +313,7 @@ export function loadConfig(): Config {
     kycFailoverCooldownMs: parseInt(process.env.KYC_FAILOVER_COOLDOWN_MS || "60000", 10),
     kycFailoverAlertAfterMs: parseInt(process.env.KYC_FAILOVER_ALERT_AFTER_MS || "900000", 10),
     taxIdHashSecret: process.env.TAX_ID_HASH_SECRET || "default_tax_id_hash_secret",
+    bankAccountHashSecret: process.env.BANK_ACCOUNT_HASH_SECRET || DEFAULT_BANK_ACCOUNT_HASH_SECRET,
     webhookLatencySlaMs: parseInt(process.env.WEBHOOK_LATENCY_SLA_MS || "5000", 10),
     webhookLatencyWindowMinutes: parseInt(process.env.WEBHOOK_LATENCY_WINDOW_MINUTES || "60", 10),
     tenantBranding: parseTenantBranding(process.env.TENANT_BRANDING),

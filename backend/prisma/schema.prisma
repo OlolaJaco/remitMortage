@@ -178,11 +178,31 @@ model Applicant {
   loanApplications    LoanApplication[]
   borrowerCredentials BorrowerCredential[]
   kycDocuments        KycDocument[]
+  linkedBankAccounts  LinkedBankAccount[]
   notificationPreference NotificationPreference?
   deletedAt          DateTime?
 
   @@index([deletedAt])
   @@index([taxIdHash])
+}
+
+/// A bank account linked to an applicant (issue #747). The account number is
+/// never stored: `accountHash` is a keyed HMAC of the normalized bank code and
+/// account number, so the same account can be found under other applicants by
+/// index without any queryable plaintext. Rows are never removed when an
+/// applicant moves to another account, so previously used accounts still match.
+model LinkedBankAccount {
+  id           String    @id @default(uuid())
+  applicantId  String
+  applicant    Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  accountHash  String
+  /// Last four digits, for masked display to reviewers.
+  accountLast4 String
+  linkedAt     DateTime  @default(now())
+
+  /// One row per applicant per account: re-linking the same account is idempotent.
+  @@unique([applicantId, accountHash])
+  @@index([accountHash])
 }
 
 model VerificationResult {

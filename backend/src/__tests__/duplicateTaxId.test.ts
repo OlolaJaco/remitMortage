@@ -83,6 +83,11 @@ jest.mock("../services/loanStore.js", () => ({
   discardDraftApplication: jest.fn(),
 }));
 
+// Shared bank account detection (issue #747) has its own suite; here it is a no-op
+// except in the test that checks /apply honours its result.
+jest.mock("../services/bankAccountDedup.js", () => ({
+  flagApplicationIfSharedBankAccount: jest.fn(async () => null),
+}));
 jest.mock("../jobs/kycExpiryReminder.js", () => ({ hasExpiredKycDocuments: jest.fn(async () => false) }));
 jest.mock("../services/notification.js", () => ({ queueNotification: jest.fn() }));
 jest.mock("../services/redis.js", () => ({ getRedisClient: () => null }));
@@ -90,6 +95,7 @@ jest.mock("../services/redis.js", () => ({ getRedisClient: () => null }));
 // Imported after the mocks so the router picks them up.
 import { loanRouter } from "../routes/loan.js";
 import { findTaxIdMatches, recordApplicantTaxIdHash } from "../services/taxIdDedup.js";
+import { flagApplicationIfSharedBankAccount } from "../services/bankAccountDedup.js";
 
 const app = express();
 app.use(express.json());
@@ -185,6 +191,16 @@ describe("POST /api/loan/apply duplicate tax ID detection", () => {
     expect(applicationUpdates).toEqual([
       { where: { id: res.body.id }, data: { manualReviewReason: "DUPLICATE_TAX_ID" } },
     ]);
+  });
+
+  it("holds an application when its applicant already shares a bank account (issue #747)", async () => {
+    (flagApplicationIfSharedBankAccount as jest.Mock).mockResolvedValueOnce("DUPLICATE_BANK_ACCOUNT");
+
+    const res = await apply(first);
+
+    expect(res.status).toBe(201);
+    expect(res.body.manualReviewReason).toBe("DUPLICATE_BANK_ACCOUNT");
+    expect(flagApplicationIfSharedBankAccount).toHaveBeenCalledWith(res.body.id, first);
   });
 
   it("does not flag the same applicant re-applying with their own tax ID", async () => {

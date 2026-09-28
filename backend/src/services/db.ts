@@ -707,6 +707,11 @@ export async function processUserDataDeletion(stellarAddress: string, reason?: s
     });
     anonymizedFields.push("taxId", "monthlyIncome", "creditScore");
 
+    // The bank account hash is derived PII, so erasure removes it (which also
+    // ends duplicate matching against this applicant, as with taxIdHash).
+    await prisma.linkedBankAccount.deleteMany({ where: { applicantId: applicant.id } });
+    anonymizedFields.push("linkedBankAccounts");
+
     await prisma.loanApplication.updateMany({
       where: { applicantId: applicant.id },
       data: { deletedAt: new Date() },

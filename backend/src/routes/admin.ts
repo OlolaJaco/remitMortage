@@ -12,6 +12,7 @@ import { mergeApplicants, MergeValidationError } from "../services/applicantMerg
 import { promoteWaitlistBatch } from "../services/inviteCode.js";
 import { runSuspiciousActivityScan } from "../services/suspiciousActivity.js";
 import { getTaxIdMatchesForApplication } from "../services/taxIdDedup.js";
+import { getBankAccountMatchesForApplication } from "../services/bankAccountDedup.js";
 import {
   initiateServicingTransfer,
   getServicingHistory,
@@ -168,6 +169,22 @@ adminRouter.get("/loans/:id/tax-id-matches", requireAdmin, async (req: Authentic
   } catch (error) {
     logger.error("Tax ID match lookup error", { error });
     return res.status(500).json({ error: "failed_to_load_tax_id_matches" });
+  }
+});
+
+// Reviewer context for applications held with DUPLICATE_BANK_ACCOUNT: the other
+// applicants sharing a linked bank account and their applications. Accounts are
+// shown as last four digits only; the hash and account number are never returned.
+adminRouter.get("/loans/:id/bank-account-matches", requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await getBankAccountMatchesForApplication(String(req.params.id));
+    if (!result) {
+      return res.status(404).json({ error: "not_found", message: "Loan application not found" });
+    }
+    return res.json(result);
+  } catch (error) {
+    logger.error("Bank account match lookup error", { error });
+    return res.status(500).json({ error: "failed_to_load_bank_account_matches" });
   }
 });
 
